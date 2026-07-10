@@ -1,0 +1,72 @@
+{
+  "personas": {
+    "maya": { "username": "Maya Chen", "icon_emoji": ":woman-technologist:" },
+    "dev": { "username": "Dev Patel", "icon_emoji": ":man-technologist:" },
+    "priya": { "username": "Priya Nair", "icon_emoji": ":woman-scientist:" },
+    "sofia": { "username": "Sofia Reyes", "icon_emoji": ":woman-office-worker:" },
+    "jonas": { "username": "Jonas Weber", "icon_emoji": ":man-office-worker:" }
+  },
+  "channels": [
+    {
+      "name": "eng-core",
+      "threads": [
+        {
+          "messages": [
+            { "persona": "maya", "text": "We need to settle the rate limiting approach for the public API before the v2 freeze. Options on the table: fixed-window counters in Redis, or the token bucket library we prototyped." },
+            { "persona": "dev", "text": "Token bucket handles bursts way better, and we already run Redis for sessions so the operational overhead is basically zero." },
+            { "persona": "priya", "text": "+1 token bucket. Fixed windows gave us those thundering-herd spikes at the top of every minute in the last load test." },
+            { "persona": "maya", "text": "Decision: we're going with token bucket rate limiting backed by Redis, starting at 100 requests/min per API key. Dev will implement the middleware by Friday, and Priya owns the load tests next week." }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "proj-phoenix",
+      "threads": [
+        {
+          "messages": [
+            { "persona": "sofia", "text": "Phoenix launch emails — we need to pick a transactional email provider this week. SendGrid has the best free tier and half the team has used it before." },
+            { "persona": "jonas", "text": "Fine by me. Their template editor is decent and the Node SDK is solid." },
+            { "persona": "sofia", "text": "OK, decided: Phoenix will use SendGrid for transactional email. Jonas, please set up the account and domain authentication this week." }
+          ]
+        },
+        {
+          "messages": [
+            { "persona": "jonas", "text": "Update on the SendGrid setup: deliverability to Outlook has been rough in testing — about 12% of our test sends landed in spam. I trialed Postmark and the same batch delivered clean, plus their support answered in under an hour." },
+            { "persona": "sofia", "text": "That's a launch risk we can't take. Switching it: Phoenix will use Postmark instead of SendGrid for transactional email. Jonas, migrate the templates by Wednesday and I'll update the budget sheet." },
+            { "persona": "jonas", "text": "On it. RIP the SendGrid setup 🫡" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "design",
+      "threads": [
+        {
+          "messages": [
+            { "persona": "priya", "text": "Thoughts on the onboarding redesign? I mocked up both directions: a progressive-disclosure flow and the classic checklist approach. Figma links in the project doc." },
+            { "persona": "maya", "text": "Checklist feels safer for activation metrics, but the progressive flow demoed noticeably better with last month's user tests. Honestly torn." },
+            { "persona": "priya", "text": "Same here. Let's get more signal from next week's user interviews before we commit either way." },
+            { "persona": "maya", "text": "Agreed, let's revisit after the interviews wrap." }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "general",
+      "threads": [
+        {
+          "messages": [
+            { "persona": "dev", "text": "Anyone else's badge not working on the 4th floor this morning?" },
+            { "persona": "sofia", "text": "Facilities says the reader is being replaced today, should be back by lunch." }
+          ]
+        },
+        {
+          "messages": [
+            { "persona": "maya", "text": "Reminder: demo day pizza on Thursday 🍕 RSVP in the calendar invite so we order enough." }
+          ]
+        }
+      ]
+    }
+  ]
+}
