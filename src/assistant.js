@@ -3,6 +3,7 @@ const { Assistant } = require('@slack/bolt');
 const store = require('./store');
 const { synthesizeAnswer } = require('./answer');
 const { decisionCard } = require('./blocks');
+const { searchContext } = require('./rts');
 
 const GREETING =
   "Hi, I'm *Precedent* 📌 — your team's decision memory.\n" +
@@ -18,7 +19,7 @@ const SUGGESTED_PROMPTS = [
 // Live workspace search (Real-Time Search API). Bot tokens require the ephemeral
 // action_token from the triggering event — use it here and never store it.
 async function rtsSearch(client, query, actionToken) {
-  const res = await client.assistant.search.context({
+  const res = await searchContext(client, {
     query,
     action_token: actionToken,
     content_types: ['messages'],

@@ -1,0 +1,74 @@
+{
+  "display_information": {
+    "name": "Precedent",
+    "description": "Decision memory for your team. Ask what was decided and get receipts.",
+    "background_color": "#1a1d21"
+  },
+  "features": {
+    "app_home": {
+      "home_tab_enabled": true,
+      "messages_tab_enabled": true,
+      "messages_tab_read_only_enabled": false
+    },
+    "bot_user": {
+      "display_name": "Precedent",
+      "always_online": true
+    },
+    "assistant_view": {
+      "assistant_description": "Precedent watches your channels for decisions, logs them with links to the source thread, and answers questions like \"what did we decide about X?\" with receipts.",
+      "suggested_prompts": [
+        {
+          "title": "What did we decide?",
+          "message": "What did we decide about the email vendor?"
+        },
+        {
+          "title": "Open action items",
+          "message": "What action items are still open?"
+        },
+        {
+          "title": "This week's decisions",
+          "message": "Summarize the decisions made this week."
+        }
+      ]
+    }
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "app_mentions:read",
+        "assistant:write",
+        "channels:history",
+        "channels:join",
+        "channels:manage",
+        "channels:read",
+        "chat:write",
+        "chat:write.customize",
+        "groups:read",
+        "im:history",
+        "im:read",
+        "im:write",
+        "reactions:write",
+        "search:read.public",
+        "users:read"
+      ]
+    }
+  },
+  "settings": {
+    "event_subscriptions": {
+      "bot_events": [
+        "app_home_opened",
+        "app_mention",
+        "assistant_thread_context_changed",
+        "assistant_thread_started",
+        "message.channels",
+        "message.im"
+      ]
+    },
+    "interactivity": {
+      "is_enabled": true
+    },
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": true,
+    "token_rotation_enabled": false
+  }
+}

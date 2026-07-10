@@ -68,14 +68,31 @@ const upsertDecision = db.transaction((decision, actionItems) => {
     topics: JSON.stringify(decision.topics || []),
   });
   const row = getByThreadStmt.get(decision.channel_id, decision.thread_ts);
-  db.prepare('DELETE FROM action_items WHERE decision_id = ?').run(row.id);
+  // Reconcile action items in place: item ids are embedded in already-sent
+  // nudge buttons and done/nudged state must survive re-extraction of a thread.
+  const current = db.prepare('SELECT * FROM action_items WHERE decision_id = ?').all(row.id);
+  const byDescription = new Map(current.map((c) => [c.description, c]));
   const insertItem = db.prepare(`
     INSERT INTO action_items (decision_id, owner_name, owner_user_id, description, due_date)
     VALUES (?, ?, ?, ?, ?)
   `);
+  const updateItem = db.prepare(
+    'UPDATE action_items SET owner_name = ?, owner_user_id = ?, due_date = ? WHERE id = ?'
+  );
+  const keep = new Set();
   for (const item of actionItems || []) {
     if (!item || !item.description) continue;
-    insertItem.run(row.id, item.owner_name || null, item.owner_user_id || null, item.description, item.due_date || null);
+    const match = byDescription.get(item.description);
+    if (match) {
+      updateItem.run(item.owner_name || null, item.owner_user_id || null, item.due_date || null, match.id);
+      keep.add(match.id);
+    } else {
+      const res = insertItem.run(row.id, item.owner_name || null, item.owner_user_id || null, item.description, item.due_date || null);
+      keep.add(Number(res.lastInsertRowid));
+    }
+  }
+  for (const c of current) {
+    if (!keep.has(c.id)) db.prepare('DELETE FROM action_items WHERE id = ?').run(c.id);
   }
   return { id: row.id, isNew: !existing };
 });
@@ -88,12 +105,22 @@ function supersede(oldId, newId) {
   return res.changes > 0;
 }
 
+// One bad row must never break every future extraction — parse defensively.
+function parseTopics(raw) {
+  try {
+    const parsed = JSON.parse(raw || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 // Active decisions, compact form for the extraction prompt ("id: title [topics]").
 function listActiveForPrompt() {
   return db
     .prepare("SELECT id, title, topics FROM decisions WHERE status = 'active' ORDER BY id")
     .all()
-    .map((d) => `${d.id}: ${d.title} [${JSON.parse(d.topics || '[]').join(', ')}]`);
+    .map((d) => `${d.id}: ${d.title} [${parseTopics(d.topics).join(', ')}]`);
 }
 
 function hydrate(row) {
@@ -109,7 +136,7 @@ function hydrate(row) {
     .all(row.id);
   return {
     ...row,
-    topics: JSON.parse(row.topics || '[]'),
+    topics: parseTopics(row.topics),
     action_items: items,
     superseded_by_title: supersededByTitle,
     supersedes,
@@ -176,13 +203,19 @@ function markActionItemDone(id) {
   return db.prepare("UPDATE action_items SET status = 'done' WHERE id = ?").run(id).changes > 0;
 }
 
+// Calendar date in the cron's timezone — UTC dates would suppress a whole
+// next-day nudge run for anything nudged/snoozed after 5pm Pacific.
+function laDate() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+}
+
 function markNudged(id) {
-  db.prepare('UPDATE action_items SET last_nudged_at = ? WHERE id = ?').run(new Date().toISOString(), id);
+  db.prepare('UPDATE action_items SET last_nudged_at = ? WHERE id = ?').run(laDate(), id);
 }
 
 // Open items not yet nudged today (so the cron never double-DMs in a day).
 function nudgeableActionItems() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = laDate();
   return openActionItems().filter((ai) => !ai.last_nudged_at || ai.last_nudged_at.slice(0, 10) < today);
 }
 

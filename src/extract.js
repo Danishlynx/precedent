@@ -58,7 +58,23 @@ ${transcript}`;
     raw = block ? block.text : '';
     const parsed = JSON.parse(stripFences(raw));
     if (typeof parsed.is_decision !== 'boolean') throw new Error('missing is_decision');
-    return parsed;
+    // Normalize the shape — a deviant-but-parseable response must degrade, not poison the store.
+    const normalized = {
+      is_decision: parsed.is_decision === true,
+      confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0,
+      title: typeof parsed.title === 'string' ? parsed.title.trim() : '',
+      decision_text: typeof parsed.decision_text === 'string' ? parsed.decision_text.trim() : '',
+      decider: typeof parsed.decider === 'string' ? parsed.decider : null,
+      topics: Array.isArray(parsed.topics) ? parsed.topics.filter((t) => typeof t === 'string') : [],
+      action_items: Array.isArray(parsed.action_items)
+        ? parsed.action_items.filter((i) => i && typeof i.description === 'string')
+        : [],
+      supersedes_id: Number.isInteger(parsed.supersedes_id) ? parsed.supersedes_id : null,
+    };
+    if (normalized.is_decision && (!normalized.title || !normalized.decision_text)) {
+      throw new Error('decision missing title/decision_text');
+    }
+    return normalized;
   } catch (err) {
     console.error('[extract] failed:', err.message, raw ? `raw output: ${raw.slice(0, 500)}` : '');
     return { is_decision: false };

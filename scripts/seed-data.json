@@ -1,10 +1,10 @@
 {
   "personas": {
-    "maya": { "username": "Maya Chen", "icon_emoji": ":woman-technologist:" },
-    "dev": { "username": "Dev Patel", "icon_emoji": ":man-technologist:" },
-    "priya": { "username": "Priya Nair", "icon_emoji": ":woman-scientist:" },
-    "sofia": { "username": "Sofia Reyes", "icon_emoji": ":woman-office-worker:" },
-    "jonas": { "username": "Jonas Weber", "icon_emoji": ":man-office-worker:" }
+    "maya": { "username": "Maya Chen", "icon_emoji": ":female-technologist:" },
+    "dev": { "username": "Dev Patel", "icon_emoji": ":male-technologist:" },
+    "priya": { "username": "Priya Nair", "icon_emoji": ":female-scientist:" },
+    "sofia": { "username": "Sofia Reyes", "icon_emoji": ":female-office-worker:" },
+    "jonas": { "username": "Jonas Weber", "icon_emoji": ":male-office-worker:" }
   },
   "channels": [
     {

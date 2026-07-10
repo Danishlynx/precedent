@@ -7,9 +7,13 @@ if (missing.length) {
   console.error(`Missing required env vars: ${missing.join(', ')} — copy .env.example to .env and fill it in.`);
   process.exit(1);
 }
+if (!process.env.DEMO_NUDGE_USER_ID) {
+  console.warn('⚠ DEMO_NUDGE_USER_ID is not set — follow-up nudge DMs will be silently skipped (§10 demo moment).');
+}
 
 const { App, LogLevel } = require('@slack/bolt');
 const express = require('express');
+const { searchContext } = require('./rts');
 const store = require('./store');
 const detector = require('./detector');
 const assistantModule = require('./assistant');
@@ -32,7 +36,7 @@ app.event('app_mention', async ({ event, client, say, logger }) => {
       await say({ text: 'RTS unavailable: no action_token on this event (logged raw event).', thread_ts: event.ts });
       return;
     }
-    const res = await client.assistant.search.context({
+    const res = await searchContext(client, {
       query,
       action_token: event.action_token,
       content_types: ['messages'],
@@ -125,11 +129,16 @@ api.post('/api/dev/scan', async (req, res) => {
     const history = await app.client.conversations.history({ channel, limit: 100 });
     const parents = new Set();
     for (const msg of history.messages || []) {
-      if (msg.subtype) continue;
+      // Seeded persona posts (chat:write.customize) carry subtype bot_message —
+      // they are exactly what we want to scan. Skip only join/edit/etc. noise.
+      if (msg.subtype && msg.subtype !== 'bot_message') continue;
       parents.add(msg.thread_ts || msg.ts);
     }
+    // Oldest first — supersession links require the superseded decision to
+    // already be in the store when the newer thread is extracted.
+    const ordered = [...parents].sort((a, b) => parseFloat(a) - parseFloat(b));
     const results = [];
-    for (const ts of parents) {
+    for (const ts of ordered) {
       const r = await detector.processThread(app.client, channel, ts);
       results.push({ thread_ts: ts, ...r });
     }
