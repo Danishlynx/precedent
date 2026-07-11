@@ -13,7 +13,6 @@ if (!process.env.DEMO_NUDGE_USER_ID) {
 
 const { App, LogLevel } = require('@slack/bolt');
 const express = require('express');
-const { searchContext } = require('./rts');
 const store = require('./store');
 const detector = require('./detector');
 const assistantModule = require('./assistant');
@@ -39,16 +38,7 @@ app.event('app_mention', async ({ event, client, say, logger }) => {
       await say({ text: 'RTS unavailable: no action_token on this event (logged raw event).', thread_ts: event.ts });
       return;
     }
-    const res = await searchContext(client, {
-      query,
-      action_token: actionToken,
-      content_types: ['messages'],
-      channel_types: ['public_channel'],
-      include_bots: true,
-      include_context_messages: true,
-      limit: 15,
-    });
-    const matches = res.results?.messages || [];
+    const matches = await assistantModule.rtsSearch(client, query, actionToken);
     const top = matches
       .slice(0, 3)
       .map((m, i) => `${i + 1}. <${m.permalink}|#${m.channel_name || m.channel_id}>: ${(m.content || '').slice(0, 80)}`)

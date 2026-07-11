@@ -16,19 +16,52 @@ const SUGGESTED_PROMPTS = [
   { title: 'What about the onboarding redesign?', message: 'What did we decide about the onboarding redesign?' },
 ];
 
+const KEYWORD_STOPWORDS = new Set([
+  'the', 'and', 'for', 'was', 'were', 'did', 'does', 'what', 'when', 'who', 'which',
+  'about', 'decide', 'decided', 'our', 'are', 'you', 'have', 'has', 'that', 'this',
+  'with', 'why', 'how', 'still', 'made', 'make', 'pick', 'picked', 'use', 'using',
+]);
+
+function keywordQuery(question) {
+  return question
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !KEYWORD_STOPWORDS.has(w))
+    .slice(0, 6)
+    .join(' ');
+}
+
 // Live workspace search (Real-Time Search API). Bot tokens require the ephemeral
 // action_token from the triggering event — use it here and never store it.
+// Semantic search can whiff on phrasing (observed live), so thin results trigger
+// a second keyword-only pass with semantics disabled.
 async function rtsSearch(client, query, actionToken) {
-  const res = await searchContext(client, {
-    query,
+  const base = {
     action_token: actionToken,
     content_types: ['messages'],
     channel_types: ['public_channel'],
     include_bots: true, // seeded demo data is bot-authored — without this, search returns nothing
     include_context_messages: true,
     limit: 15,
-  });
-  return res.results?.messages || [];
+  };
+  const res = await searchContext(client, { query, ...base });
+  const matches = res.results?.messages || [];
+  if (matches.length < 3) {
+    const kw = keywordQuery(query);
+    if (kw) {
+      try {
+        const res2 = await searchContext(client, { query: kw, disable_semantic_search: true, ...base });
+        const seen = new Set(matches.map((m) => `${m.channel_id}:${m.message_ts}`));
+        for (const m of res2.results?.messages || []) {
+          if (!seen.has(`${m.channel_id}:${m.message_ts}`)) matches.push(m);
+        }
+      } catch (err) {
+        console.error('[assistant] keyword-fallback RTS failed:', err.data?.error || err.message);
+      }
+    }
+  }
+  return matches;
 }
 
 const assistant = new Assistant({
@@ -102,4 +135,4 @@ function register(app) {
   app.assistant(assistant);
 }
 
-module.exports = { register };
+module.exports = { register, rtsSearch };
