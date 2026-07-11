@@ -54,6 +54,17 @@ Smoke test: `@Precedent which email vendor?` in any seeded channel — it must r
 
 Fully restart Claude Desktop after editing. Tools: `search_decisions`, `get_decision`, `list_open_action_items`. Every call is logged to stderr (`[MCP] search_decisions("…")`); Claude Desktop captures it in `%APPDATA%\Claude\logs\mcp-server-precedent.log`.
 
+## Deploy your own
+
+Precedent is MIT-licensed — run it for your own team:
+
+1. Create a Slack app in **your** workspace from [manifest.json](manifest.json) (Create New App → From a manifest). Enable the Agents/AI toggle, generate an app-level token with `connections:write`, install to the workspace.
+2. Copy `.env.example` → `.env` and fill in your tokens, your Anthropic API key, and your Slack member ID for nudges.
+3. `npm install && npm start` — that's a fully working local instance.
+4. For always-on hosting, follow the Railway steps below (any Node host with a persistent disk works).
+
+Skip `npm run seed` if you want it watching real conversations only — it exists to create demo data.
+
 ## Deploy (Railway)
 
 - Node service from this repo (Railpack default builder; `engines.node` pins 22.x).
