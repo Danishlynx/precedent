@@ -5,7 +5,7 @@ Decision memory for Slack. Watches team channels, extracts decisions with Claude
 Built for the Slack Agent Builder Challenge. Uses all three required technologies: Slack AI assistant surface, the Real-Time Search API (`assistant.search.context`), and an MCP server.
 
 
-![Uploading Screenshot 2026-07-11 194748.png…]()
+
 
 
 ## Setup
