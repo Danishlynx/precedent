@@ -68,6 +68,15 @@ app.error(async (err) => {
 const api = express();
 api.use(express.json());
 
+api.get('/', (_req, res) => {
+  res.json({
+    app: 'Precedent',
+    tagline: 'Decision memory for Slack — ask what was decided, get receipts.',
+    health: '/health',
+    api: 'bearer-authenticated, consumed by the Precedent MCP server',
+  });
+});
+
 api.get('/health', (_req, res) => {
   res.json({ ok: true, uptime: process.uptime(), ...store.stats() });
 });
