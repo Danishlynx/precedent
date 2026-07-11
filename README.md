@@ -4,6 +4,9 @@ Decision memory for Slack. Watches team channels, extracts decisions with Claude
 
 Built for the Slack Agent Builder Challenge. Uses all three required technologies: Slack AI assistant surface, the Real-Time Search API (`assistant.search.context`), and an MCP server.
 
+
+![Uploading image.png…]()
+
 ## Setup
 
 1. Create the Slack app from [manifest.json](manifest.json) at api.slack.com/apps (Create New App → From a manifest), enable the Agents/AI toggle, enable Socket Mode, generate an app-level token with `connections:write`, and install to the workspace.
