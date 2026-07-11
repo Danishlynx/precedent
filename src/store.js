@@ -99,9 +99,19 @@ const upsertDecision = db.transaction((decision, actionItems) => {
 
 function supersede(oldId, newId) {
   if (!oldId || oldId === newId) return false;
+  const oldRow = db.prepare('SELECT decided_at FROM decisions WHERE id = ?').get(oldId);
+  const newRow = db.prepare('SELECT decided_at FROM decisions WHERE id = ?').get(newId);
+  if (!oldRow || !newRow) return false;
+  // Hard invariant: supersession only flows forward in time. Re-extracting an
+  // old thread must never let it claim to supersede a newer decision (the LLM
+  // has no notion of order and will invert the chain on rescans otherwise).
+  if (String(newRow.decided_at) <= String(oldRow.decided_at)) {
+    console.warn(`[store] refused supersede(${oldId} <- ${newId}): superseding decision is not newer`);
+    return false;
+  }
   const res = db
-    .prepare("UPDATE decisions SET status = 'superseded', superseded_by = ? WHERE id = ? AND id != ?")
-    .run(newId, oldId, newId);
+    .prepare("UPDATE decisions SET status = 'superseded', superseded_by = ? WHERE id = ?")
+    .run(newId, oldId);
   return res.changes > 0;
 }
 

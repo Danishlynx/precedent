@@ -24,7 +24,7 @@ JSON shape:
   "supersedes_id": number|null   // id from EXISTING DECISIONS that this decision replaces, else null
 }
 
-Set "supersedes_id" ONLY when the new decision clearly reverses or replaces one of the listed existing decisions on the same subject. If is_decision is false, still return the full shape with empty/null fields.`;
+Set "supersedes_id" ONLY when this thread's decision clearly reverses or replaces one of the listed existing decisions on the same subject — i.e. the existing decision came FIRST and this thread changes it. If this thread reads like the ORIGINAL decision and the existing one is the later change, return null. If is_decision is false, still return the full shape with empty/null fields.`;
 
 function stripFences(text) {
   return text
