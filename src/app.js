@@ -26,31 +26,26 @@ const app = new App({
   logLevel: LogLevel.INFO,
 });
 
-// --- Smoke test / live diagnostic: @Precedent <query> runs RTS from a channel ---
+// --- In-channel Q&A: @Precedent <question> answers with the same flow as the panel ---
 app.event('app_mention', async ({ event, client, say, logger }) => {
   try {
-    const query = (event.text || '').replace(/<@[^>]+>/g, '').trim() || 'decisions this week';
+    const question = (event.text || '').replace(/<@[^>]+>/g, '').trim() || 'What decisions were made this week?';
     // Slack delivers the ephemeral RTS token nested under assistant_thread
     // (observed live), not at the top level as documented — accept both.
     const actionToken = event.action_token || event.assistant_thread?.action_token;
     if (!actionToken) {
-      logger.error('[smoke] no action_token on app_mention — raw event:', JSON.stringify(event));
-      await say({ text: 'RTS unavailable: no action_token on this event (logged raw event).', thread_ts: event.ts });
-      return;
+      logger.error('[mention] no action_token on app_mention — raw event:', JSON.stringify(event));
     }
-    const matches = await assistantModule.rtsSearch(client, query, actionToken);
-    const top = matches
-      .slice(0, 3)
-      .map((m, i) => `${i + 1}. <${m.permalink}|#${m.channel_name || m.channel_id}>: ${(m.content || '').slice(0, 80)}`)
-      .join('\n');
-    await say({
-      text: `🔎 RTS found *${matches.length}* match(es) for "${query}"${top ? `\n${top}` : ''}`,
-      thread_ts: event.ts,
-    });
-  } catch (err) {
-    logger.error('[smoke] RTS failed:', err.data?.error || err.message);
+    // Quick visible "I heard you" while the search + synthesis run.
     try {
-      await say({ text: `RTS error: \`${err.data?.error || err.message}\``, thread_ts: event.ts });
+      await client.reactions.add({ channel: event.channel, timestamp: event.ts, name: 'mag' });
+    } catch { /* already_reacted etc. — cosmetic only */ }
+    const { text, blocks } = await assistantModule.answerQuestion(client, question, actionToken);
+    await say({ text, blocks, thread_ts: event.ts });
+  } catch (err) {
+    logger.error('[mention] failed:', err.data?.error || err.message);
+    try {
+      await say({ text: 'Sorry — something went wrong while searching. Please try again.', thread_ts: event.ts });
     } catch { /* never crash a handler */ }
   }
 });

@@ -46,8 +46,8 @@ async function rtsSearch(client, query, actionToken) {
     limit: 15,
   };
   const res = await searchContext(client, { query, ...base });
-  const matches = res.results?.messages || [];
-  if (matches.length < 3) {
+  let matches = res.results?.messages || [];
+  if (matches.length < 5) {
     const kw = keywordQuery(query);
     if (kw) {
       try {
@@ -61,7 +61,57 @@ async function rtsSearch(client, query, actionToken) {
       }
     }
   }
-  return matches;
+  return filterSelfNoise(client, matches);
+}
+
+// Questions asked TO the bot and the bot's own answers match their own keywords
+// and pollute later searches — drop them. Seeded persona posts are kept (they
+// are bot-authored but never mention the bot or start with our answer marker).
+let botUserId = null;
+async function filterSelfNoise(client, matches) {
+  if (!botUserId) {
+    try {
+      botUserId = (await client.auth.test()).user_id;
+    } catch {
+      return matches;
+    }
+  }
+  return matches.filter((m) => {
+    const text = m.content || '';
+    return !text.includes(`<@${botUserId}>`) && !text.startsWith('🔎');
+  });
+}
+
+// Full Q&A flow shared by the assistant panel and in-channel @mentions:
+// store search + live RTS (degrading gracefully) -> synthesized answer + card.
+async function answerQuestion(client, question, actionToken) {
+  const decisions = store.searchDecisions(question);
+  const openItems = store.openActionItems();
+
+  let rtsMatches = [];
+  let rtsFailed = false;
+  if (!actionToken) {
+    rtsFailed = true;
+  } else {
+    try {
+      rtsMatches = await rtsSearch(client, question, actionToken);
+    } catch (err) {
+      rtsFailed = true;
+      console.error('[assistant] RTS failed:', err.data?.error || err.message);
+    }
+  }
+
+  const answerText = await synthesizeAnswer(question, decisions, rtsMatches, openItems, rtsFailed);
+
+  // Primary receipt: best active decision, else best decision, else closest RTS thread.
+  const primary = decisions.find((d) => d.status === 'active' && d.permalink) || decisions.find((d) => d.permalink);
+  const closest = !primary && rtsMatches.find((m) => m.permalink);
+  const blocks = decisionCard(
+    answerText,
+    primary || null,
+    closest ? { url: closest.permalink, label: 'View closest thread ↗' } : null
+  );
+  return { text: answerText, blocks };
 }
 
 const assistant = new Assistant({
@@ -85,41 +135,15 @@ const assistant = new Assistant({
       await setTitle(question.slice(0, 60));
       await setStatus("Searching your team's decisions…");
 
-      // 1. Structured decision log
-      const decisions = store.searchDecisions(question);
-      const openItems = store.openActionItems();
-
-      // 2. Live retrieval via RTS — degrade gracefully to store-only if unavailable
-      let rtsMatches = [];
-      let rtsFailed = false;
       // Token arrives nested under assistant_thread (observed live on app_mention;
       // same defensive lookup here) — accept both shapes, use immediately, never store.
       const actionToken = message.action_token || message.assistant_thread?.action_token;
       if (!actionToken) {
-        rtsFailed = true;
         logger.error('[assistant] no action_token on event — raw message:', JSON.stringify(message));
-      } else {
-        try {
-          rtsMatches = await rtsSearch(client, question, actionToken);
-        } catch (err) {
-          rtsFailed = true;
-          logger.error('[assistant] RTS failed:', err.data?.error || err.message);
-        }
       }
 
-      // 3. Synthesize the answer with receipts
-      const answerText = await synthesizeAnswer(question, decisions, rtsMatches, openItems, rtsFailed);
-
-      // Primary receipt: best active decision, else best decision, else closest RTS thread.
-      const primary = decisions.find((d) => d.status === 'active' && d.permalink) || decisions.find((d) => d.permalink);
-      const closest = !primary && rtsMatches.find((m) => m.permalink);
-      const blocks = decisionCard(
-        answerText,
-        primary || null,
-        closest ? { url: closest.permalink, label: 'View closest thread ↗' } : null
-      );
-
-      await say({ text: answerText, blocks });
+      const { text, blocks } = await answerQuestion(client, question, actionToken);
+      await say({ text, blocks });
     } catch (err) {
       logger.error('[assistant] userMessage failed:', err);
       try {
@@ -135,4 +159,4 @@ function register(app) {
   app.assistant(assistant);
 }
 
-module.exports = { register, rtsSearch };
+module.exports = { register, rtsSearch, answerQuestion };
