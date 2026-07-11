@@ -33,6 +33,24 @@ async function channelName(client, channelId) {
   }
 }
 
+// Cap what we send to the extractor: keep the head (context) and tail (where
+// decisions usually land) of oversized threads instead of failing or ballooning cost.
+const MAX_MSG_CHARS = 2000;
+const MAX_TRANSCRIPT_CHARS = 15000;
+function buildTranscript(lines) {
+  const clipped = lines.map((l) => (l.length > MAX_MSG_CHARS ? `${l.slice(0, MAX_MSG_CHARS)} …[truncated]` : l));
+  let total = clipped.reduce((n, l) => n + l.length + 1, 0);
+  if (total <= MAX_TRANSCRIPT_CHARS) return clipped.join('\n');
+  const head = clipped.slice(0, 3);
+  const tail = [];
+  let budget = MAX_TRANSCRIPT_CHARS - head.reduce((n, l) => n + l.length + 1, 0) - 40;
+  for (let i = clipped.length - 1; i >= 3 && budget > 0; i--) {
+    budget -= clipped[i].length + 1;
+    if (budget > 0) tail.unshift(clipped[i]);
+  }
+  return [...head, '…[thread truncated]…', ...tail].join('\n');
+}
+
 async function processThread(client, channel, threadTs) {
   const replies = await client.conversations.replies({ channel, ts: threadTs, limit: 50 });
   const messages = replies.messages || [];
@@ -43,7 +61,7 @@ async function processThread(client, channel, threadTs) {
     if (!msg.text) continue;
     lines.push(`${await authorName(client, msg)}: ${msg.text}`);
   }
-  const transcript = lines.join('\n');
+  const transcript = buildTranscript(lines);
   const chName = await channelName(client, channel);
 
   const extraction = await extractDecision(transcript, chName, store.listActiveForPrompt());
