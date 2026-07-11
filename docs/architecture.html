@@ -1,0 +1,305 @@
+<title>Precedent — Architecture</title>
+<style>
+  :root {
+    --bg: #f7f6f2;
+    --surface: #ffffff;
+    --surface-2: #efede7;
+    --line: #d8d4ca;
+    --line-strong: #b8b3a6;
+    --text: #23262c;
+    --muted: #6b7078;
+    --brass: #b07f24;
+    --brass-soft: rgba(176, 127, 36, 0.12);
+    --slack: #7c5cad;
+    --slack-soft: rgba(124, 92, 173, 0.10);
+    --mcp: #2e8873;
+    --mcp-soft: rgba(46, 136, 115, 0.10);
+    --shadow: 0 1px 3px rgba(30, 30, 25, 0.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15171b;
+      --surface: #1e2128;
+      --surface-2: #181b20;
+      --line: #363b45;
+      --line-strong: #4a505c;
+      --text: #e8e6e0;
+      --muted: #9aa0ab;
+      --brass: #d9a441;
+      --brass-soft: rgba(217, 164, 65, 0.14);
+      --slack: #b195dd;
+      --slack-soft: rgba(177, 149, 221, 0.12);
+      --mcp: #5fb8a5;
+      --mcp-soft: rgba(95, 184, 165, 0.12);
+      --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15171b; --surface: #1e2128; --surface-2: #181b20; --line: #363b45;
+    --line-strong: #4a505c; --text: #e8e6e0; --muted: #9aa0ab; --brass: #d9a441;
+    --brass-soft: rgba(217, 164, 65, 0.14); --slack: #b195dd; --slack-soft: rgba(177, 149, 221, 0.12);
+    --mcp: #5fb8a5; --mcp-soft: rgba(95, 184, 165, 0.12); --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+  :root[data-theme="light"] {
+    --bg: #f7f6f2; --surface: #ffffff; --surface-2: #efede7; --line: #d8d4ca;
+    --line-strong: #b8b3a6; --text: #23262c; --muted: #6b7078; --brass: #b07f24;
+    --brass-soft: rgba(176, 127, 36, 0.12); --slack: #7c5cad; --slack-soft: rgba(124, 92, 173, 0.10);
+    --mcp: #2e8873; --mcp-soft: rgba(46, 136, 115, 0.10); --shadow: 0 1px 3px rgba(30, 30, 25, 0.08);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.45 "Segoe UI", system-ui, sans-serif;
+    margin: 0;
+    padding: 32px 16px 40px;
+  }
+  .frame { max-width: 1340px; margin: 0 auto; }
+  .scroller { overflow-x: auto; padding-bottom: 8px; }
+
+  /* ---------- header ---------- */
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 26px; flex-wrap: wrap; }
+  .wordmark { display: flex; align-items: center; gap: 12px; }
+  .pin { width: 30px; height: 30px; flex: none; }
+  h1 {
+    font: 700 26px/1 ui-monospace, "Cascadia Code", Consolas, monospace;
+    letter-spacing: 0.04em; margin: 0;
+  }
+  .tagline { color: var(--muted); margin: 6px 0 0; font-size: 13.5px; }
+  .badges { display: flex; gap: 10px; flex-wrap: wrap; }
+  .badge {
+    display: flex; align-items: center; gap: 8px;
+    border: 1px solid var(--brass); color: var(--brass);
+    background: var(--brass-soft);
+    border-radius: 999px; padding: 6px 14px 6px 8px;
+    font: 600 12px/1 "Segoe UI", system-ui, sans-serif;
+    letter-spacing: 0.02em; white-space: nowrap;
+  }
+  .badge .n {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--brass); color: var(--bg);
+    display: grid; place-items: center;
+    font: 700 11px/1 ui-monospace, Consolas, monospace;
+  }
+
+  /* ---------- diagram grid ---------- */
+  .diagram {
+    display: grid;
+    grid-template-columns: 300px 128px 400px 128px 300px;
+    gap: 0;
+    min-width: 1256px;
+    align-items: stretch;
+  }
+  .zone {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface-2);
+    padding: 16px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .zone-label {
+    font: 600 11px/1 "Segoe UI", system-ui, sans-serif;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 2px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .zone-label::after { content: ""; height: 1px; background: var(--line); flex: 1; }
+  .zone.slack .zone-label { color: var(--slack); }
+  .zone.slack .zone-label::after { background: color-mix(in srgb, var(--slack) 40%, transparent); }
+  .zone.demo .zone-label { color: var(--mcp); }
+  .zone.demo .zone-label::after { background: color-mix(in srgb, var(--mcp) 40%, transparent); }
+
+  .node {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    box-shadow: var(--shadow);
+    position: relative;
+  }
+  .node h3 {
+    font: 600 13px/1.3 ui-monospace, "Cascadia Code", Consolas, monospace;
+    margin: 0 0 3px;
+  }
+  .node p { margin: 0; color: var(--muted); font-size: 12px; }
+  .node .chip {
+    position: absolute; top: -9px; right: 10px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--brass); color: var(--bg);
+    display: grid; place-items: center;
+    font: 700 11px/1 ui-monospace, Consolas, monospace;
+    box-shadow: var(--shadow);
+  }
+  .node.accent { border-color: var(--brass); }
+  .node.slack-tint { border-left: 3px solid var(--slack); }
+  .node.mcp-tint { border-left: 3px solid var(--mcp); }
+
+  /* the one-process container inside Railway zone */
+  .process {
+    border: 1px dashed var(--line-strong);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex; flex-direction: column; gap: 10px;
+    background: transparent;
+  }
+  .process-label { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+  .pipeline { display: flex; flex-direction: column; gap: 6px; }
+  .pipe-arrow { text-align: center; color: var(--muted); font-size: 12px; line-height: 1; }
+
+  /* ---------- connector gutters ---------- */
+  .gutter {
+    display: flex; flex-direction: column; justify-content: center;
+    gap: 30px; padding: 12px 8px;
+  }
+  .conn { text-align: center; }
+  .conn svg { width: 100%; height: 14px; display: block; }
+  .conn .lbl { font-size: 10.5px; color: var(--muted); margin-top: 4px; line-height: 1.35; }
+  .conn .lbl strong { color: var(--text); font-weight: 600; }
+  .conn.brass .lbl strong { color: var(--brass); }
+  .stroke { stroke: var(--line-strong); }
+  .conn.brass .stroke { stroke: var(--brass); }
+  .fillhead { fill: var(--line-strong); }
+  .conn.brass .fillhead { fill: var(--brass); }
+
+  /* ---------- footer ---------- */
+  footer {
+    margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--line);
+    display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    color: var(--muted); font-size: 12px;
+  }
+  footer code { font: 12px ui-monospace, Consolas, monospace; color: var(--text); }
+</style>
+
+<div class="frame">
+  <header>
+    <div class="wordmark">
+      <svg class="pin" viewBox="0 0 30 30" aria-hidden="true">
+        <circle cx="19" cy="11" r="7.5" fill="var(--brass)"/>
+        <rect x="13.4" y="15.4" width="3" height="11" rx="1.5" transform="rotate(45 14.9 20.9)" fill="var(--brass)"/>
+      </svg>
+      <div>
+        <h1>PRECEDENT</h1>
+        <p class="tagline">Decision memory for Slack — ask what was decided, get receipts.</p>
+      </div>
+    </div>
+    <div class="badges">
+      <span class="badge"><span class="n">1</span>Slack AI assistant surface</span>
+      <span class="badge"><span class="n">2</span>Real-Time Search API</span>
+      <span class="badge"><span class="n">3</span>MCP server</span>
+    </div>
+  </header>
+
+  <div class="scroller">
+  <div class="diagram">
+
+    <!-- ZONE: Slack -->
+    <section class="zone slack">
+      <div class="zone-label">Slack workspace</div>
+      <div class="node slack-tint">
+        <h3>#team-channels</h3>
+        <p>Real conversations. Decisions get a 📌 + a logged-confirmation reply.</p>
+      </div>
+      <div class="node slack-tint"><span class="chip">1</span>
+        <h3>Assistant panel</h3>
+        <p>Suggested prompts · setStatus · answers as cards with a <em>View source thread ↗</em> button.</p>
+      </div>
+      <div class="node slack-tint">
+        <h3>Nudge DMs</h3>
+        <p>Open action items · Mark done ✅ / Snooze 💤 update in place.</p>
+      </div>
+      <div class="node slack-tint">
+        <h3>App Home</h3>
+        <p>Dashboard: active decisions, superseded history, open items.</p>
+      </div>
+    </section>
+
+    <!-- GUTTER: Slack <-> Railway -->
+    <div class="gutter">
+      <div class="conn">
+        <svg viewBox="0 0 100 14"><line class="stroke" x1="2" y1="7" x2="90" y2="7" stroke-width="1.5"/><polygon class="fillhead" points="90,2.5 99,7 90,11.5"/></svg>
+        <div class="lbl"><strong>events</strong><br>Socket Mode (outbound WSS)</div>
+      </div>
+      <div class="conn">
+        <svg viewBox="0 0 100 14"><line class="stroke" x1="10" y1="7" x2="98" y2="7" stroke-width="1.5"/><polygon class="fillhead" points="10,2.5 1,7 10,11.5"/></svg>
+        <div class="lbl"><strong>answers · 📌 · nudges</strong><br>Web API</div>
+      </div>
+      <div class="conn brass">
+        <svg viewBox="0 0 100 14"><line class="stroke" x1="10" y1="7" x2="90" y2="7" stroke-width="1.5"/><polygon class="fillhead" points="90,2.5 99,7 90,11.5"/><polygon class="fillhead" points="10,2.5 1,7 10,11.5"/></svg>
+        <div class="lbl"><strong>② live retrieval</strong><br>assistant.search.context<br>+ ephemeral action_token</div>
+      </div>
+    </div>
+
+    <!-- ZONE: Railway -->
+    <section class="zone">
+      <div class="zone-label">Railway · always-on</div>
+      <div class="process">
+        <div class="process-label">One Node.js process — Bolt (Socket Mode)</div>
+        <div class="pipeline">
+          <div class="node">
+            <h3>Detector</h3>
+            <p>message events · 90s per-thread debounce · subtype guard</p>
+          </div>
+          <div class="pipe-arrow">▼</div>
+          <div class="node">
+            <h3>Extractor · Claude</h3>
+            <p>thread → JSON: decision, decider, topics, action items, supersedes_id</p>
+          </div>
+          <div class="pipe-arrow">▼</div>
+          <div class="node accent">
+            <h3>Decision store · SQLite</h3>
+            <p>structured records + permalinks — never message archives. Supersession flows only forward in time. Persisted on a Railway volume.</p>
+          </div>
+        </div>
+        <div class="node">
+          <h3>Answer synthesis · Claude</h3>
+          <p>question + stored decisions + RTS matches → ≤120-word answer, never invents</p>
+        </div>
+        <div class="node">
+          <h3>Follow-up engine</h3>
+          <p>cron weekdays 9am PT · DM nudges · once-per-day gate</p>
+        </div>
+      </div>
+      <div class="node">
+        <h3>Express REST bridge</h3>
+        <p>same process · bearer auth · /health for uptime monitoring</p>
+      </div>
+    </section>
+
+    <!-- GUTTER: Railway <-> Demo machine -->
+    <div class="gutter">
+      <div class="conn brass">
+        <svg viewBox="0 0 100 14"><line class="stroke" x1="10" y1="7" x2="98" y2="7" stroke-width="1.5"/><polygon class="fillhead" points="10,2.5 1,7 10,11.5"/></svg>
+        <div class="lbl"><strong>③ tool calls</strong><br>HTTPS + bearer token</div>
+      </div>
+      <div class="conn">
+        <svg viewBox="0 0 100 14"><line class="stroke" x1="2" y1="7" x2="90" y2="7" stroke-width="1.5"/><polygon class="fillhead" points="90,2.5 99,7 90,11.5"/></svg>
+        <div class="lbl"><strong>JSON decisions</strong><br>with Slack permalinks</div>
+      </div>
+    </div>
+
+    <!-- ZONE: Demo machine -->
+    <section class="zone demo">
+      <div class="zone-label">Any MCP client</div>
+      <div class="node mcp-tint"><span class="chip">3</span>
+        <h3>Precedent MCP server</h3>
+        <p>stdio · search_decisions · get_decision · list_open_action_items · every call logged to stderr</p>
+      </div>
+      <div class="node mcp-tint">
+        <h3>Claude Desktop</h3>
+        <p>"What did the team decide about the email vendor?" → answers from the live decision log, agent-to-agent.</p>
+      </div>
+      <div class="node">
+        <h3>UptimeRobot</h3>
+        <p>pings /health every 5 min through the judging window.</p>
+      </div>
+    </section>
+
+  </div>
+  </div>
+
+  <footer>
+    <span><code>@slack/bolt</code> (Socket Mode) · <code>claude-sonnet-4-6</code> · <code>better-sqlite3</code> on a Railway volume · <code>express</code> · <code>@modelcontextprotocol/sdk</code></span>
+    <span>Built for the Slack Agent Builder Challenge · uses all three qualifying technologies ①②③</span>
+  </footer>
+</div>
