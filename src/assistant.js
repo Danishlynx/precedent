@@ -6,8 +6,9 @@ const { decisionCard } = require('./blocks');
 const { searchContext } = require('./rts');
 
 const GREETING =
-  "Hi, I'm *Precedent* 📌 — your team's decision memory.\n" +
-  'I watch your channels for decisions, log them with links to the source thread, and answer questions like _"what did we decide about X?"_ with receipts.';
+  "👋 I'm *Precedent* — I remember what your team decided, so you don't have to.\n" +
+  'I quietly watch your channels: when a decision happens, I pin it 📌, log who decided what (and what replaced it), and track the action items. ' +
+  'Ask me anything — every answer comes with a *link to the source thread*, so you never have to take my word for it.';
 
 const SUGGESTED_PROMPTS = [
   { title: 'Which email vendor did we pick?', message: 'Which email vendor did we pick for Phoenix?' },

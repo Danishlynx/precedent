@@ -2,6 +2,7 @@
 // the extractor and stores any decision (with a visible 📌 on the thread).
 const store = require('./store');
 const { extractDecision } = require('./extract');
+const { loggedCard } = require('./blocks');
 
 const DEBOUNCE_MS = 90 * 1000;
 const timers = new Map(); // "channel:thread_ts" -> timeout
@@ -103,6 +104,21 @@ async function processThread(client, channel, threadTs) {
   } catch (err) {
     if (err.data?.error !== 'already_reacted') {
       console.error('[detector] reactions.add failed:', err.data?.error || err.message);
+    }
+  }
+
+  // Visible capture moment — only on first log, never again on re-extraction.
+  if (isNew) {
+    try {
+      const d = store.getDecision(id);
+      await client.chat.postMessage({
+        channel,
+        thread_ts: threadTs,
+        text: `📌 Logged as a decision: ${extraction.title}`,
+        blocks: loggedCard(d),
+      });
+    } catch (err) {
+      console.error('[detector] logged-card post failed:', err.data?.error || err.message);
     }
   }
 

@@ -7,15 +7,21 @@ function decisionCard(answerText, decision, fallbackLink) {
   ];
 
   if (decision) {
-    const status = decision.status === 'superseded' ? '⚠️ superseded' : '✅ active';
+    const status = decision.status === 'superseded' ? '⚠️ Superseded' : '✅ Active';
+    const lines = [
+      `📌 *${decision.title}*`,
+      `${status} · decided by *${decision.decider || 'unknown'}* · ${(decision.decided_at || '').slice(0, 10)}`,
+    ];
+    if (decision.supersedes?.length) {
+      lines.push(`↩️ Replaced: ${decision.supersedes.map((s) => `_${s.title}_`).join(' · ')}`);
+    }
+    if (decision.status === 'superseded' && decision.superseded_by_title) {
+      lines.push(`➡️ Now superseded by: _${decision.superseded_by_title}_`);
+    }
+    blocks.push({ type: 'divider' });
     blocks.push({
       type: 'context',
-      elements: [
-        {
-          type: 'mrkdwn',
-          text: `📌 *${decision.title}* · ${status} · decided by ${decision.decider || 'unknown'} · ${(decision.decided_at || '').slice(0, 10)}`,
-        },
-      ],
+      elements: [{ type: 'mrkdwn', text: lines.join('\n') }],
     });
   }
 
@@ -29,6 +35,7 @@ function decisionCard(answerText, decision, fallbackLink) {
           text: { type: 'plain_text', text: fallbackLink && !decision?.permalink ? fallbackLink.label : 'View source thread ↗' },
           url: link,
           action_id: 'view_source_thread',
+          style: 'primary',
         },
       ],
     });
@@ -37,14 +44,38 @@ function decisionCard(answerText, decision, fallbackLink) {
   return blocks;
 }
 
+// Compact in-thread confirmation posted when a NEW decision is captured live.
+function loggedCard(decision) {
+  return [
+    {
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text: `📌 Logged as a decision: *${decision.title}* — decided by ${decision.decider || 'the team'}. I'll remember this; ask me _"what did we decide about…?"_ anytime.`,
+        },
+      ],
+    },
+  ];
+}
+
 function nudgeBlocks(item) {
   return [
     {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `👋 *Follow-up on an action item*\n*${item.description}*${item.due_date ? `\nDue: ${item.due_date}` : ''}\nOwner: ${item.owner_name || 'unassigned'} · from decision *${item.decision_title}*${item.decision_permalink ? ` (<${item.decision_permalink}|source thread ↗>)` : ''}`,
+        text: `👋 *Open action item*\n*${item.description}*`,
       },
+    },
+    {
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text: `Owner: *${item.owner_name || 'unassigned'}*${item.due_date ? ` · Due: *${item.due_date}*` : ''} · from 📌 _${item.decision_title}_${item.decision_permalink ? `  ·  <${item.decision_permalink}|source thread ↗>` : ''}`,
+        },
+      ],
     },
     {
       type: 'actions',
@@ -77,10 +108,10 @@ function nudgeResolvedBlocks(item, resolution) {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `${line}\nfrom decision *${item.decision_title}*`,
+        text: `${line}\nfrom decision 📌 _${item.decision_title}_`,
       },
     },
   ];
 }
 
-module.exports = { decisionCard, nudgeBlocks, nudgeResolvedBlocks };
+module.exports = { decisionCard, loggedCard, nudgeBlocks, nudgeResolvedBlocks };
