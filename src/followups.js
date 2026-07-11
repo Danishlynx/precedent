@@ -6,7 +6,9 @@ const store = require('./store');
 const { nudgeBlocks, nudgeResolvedBlocks } = require('./blocks');
 
 async function runNudges(client) {
-  const targetUser = process.env.DEMO_NUDGE_USER_ID;
+  // Trim + unquote: env vars pasted into dashboards often pick up invisible
+  // whitespace or quotes, and conversations.open fails with user_not_found.
+  const targetUser = (process.env.DEMO_NUDGE_USER_ID || '').trim().replace(/^["']+|["']+$/g, '');
   if (!targetUser) {
     console.error('[followups] DEMO_NUDGE_USER_ID not set — skipping nudges');
     return { sent: 0 };
@@ -17,7 +19,13 @@ async function runNudges(client) {
     return { sent: 0 };
   }
 
-  const dm = await client.conversations.open({ users: targetUser });
+  let dm;
+  try {
+    dm = await client.conversations.open({ users: targetUser });
+  } catch (err) {
+    console.error(`[followups] conversations.open failed for ${JSON.stringify(targetUser)}:`, err.data?.error || err.message);
+    throw err;
+  }
   let sent = 0;
   for (const item of items) {
     try {
