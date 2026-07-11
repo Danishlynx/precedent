@@ -31,14 +31,17 @@ const app = new App({
 app.event('app_mention', async ({ event, client, say, logger }) => {
   try {
     const query = (event.text || '').replace(/<@[^>]+>/g, '').trim() || 'decisions this week';
-    if (!event.action_token) {
+    // Slack delivers the ephemeral RTS token nested under assistant_thread
+    // (observed live), not at the top level as documented — accept both.
+    const actionToken = event.action_token || event.assistant_thread?.action_token;
+    if (!actionToken) {
       logger.error('[smoke] no action_token on app_mention — raw event:', JSON.stringify(event));
       await say({ text: 'RTS unavailable: no action_token on this event (logged raw event).', thread_ts: event.ts });
       return;
     }
     const res = await searchContext(client, {
       query,
-      action_token: event.action_token,
+      action_token: actionToken,
       content_types: ['messages'],
       channel_types: ['public_channel'],
       include_bots: true,

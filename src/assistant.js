@@ -59,7 +59,9 @@ const assistant = new Assistant({
       // 2. Live retrieval via RTS — degrade gracefully to store-only if unavailable
       let rtsMatches = [];
       let rtsFailed = false;
-      const actionToken = message.action_token;
+      // Token arrives nested under assistant_thread (observed live on app_mention;
+      // same defensive lookup here) — accept both shapes, use immediately, never store.
+      const actionToken = message.action_token || message.assistant_thread?.action_token;
       if (!actionToken) {
         rtsFailed = true;
         logger.error('[assistant] no action_token on event — raw message:', JSON.stringify(message));
