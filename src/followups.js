@@ -5,7 +5,8 @@ const cron = require('node-cron');
 const store = require('./store');
 const { nudgeBlocks, nudgeResolvedBlocks } = require('./blocks');
 
-async function runNudges(client) {
+// force: bypass the once-per-day gate (dev trigger for demo retakes).
+async function runNudges(client, force = false) {
   // Trim + unquote: env vars pasted into dashboards often pick up invisible
   // whitespace or quotes, and conversations.open fails with user_not_found.
   const targetUser = (process.env.DEMO_NUDGE_USER_ID || '').trim().replace(/^["']+|["']+$/g, '');
@@ -13,7 +14,7 @@ async function runNudges(client) {
     console.error('[followups] DEMO_NUDGE_USER_ID not set — skipping nudges');
     return { sent: 0 };
   }
-  const items = store.nudgeableActionItems();
+  const items = force ? store.openActionItems() : store.nudgeableActionItems();
   if (!items.length) {
     console.log('[followups] nothing to nudge');
     return { sent: 0 };

@@ -229,6 +229,14 @@ function nudgeableActionItems() {
   return openActionItems().filter((ai) => !ai.last_nudged_at || ai.last_nudged_at.slice(0, 10) < today);
 }
 
+// Dev/demo tooling: remove a decision entirely (retakes). Anything this
+// decision superseded is restored to active.
+const deleteDecision = db.transaction((id) => {
+  db.prepare('DELETE FROM action_items WHERE decision_id = ?').run(id);
+  db.prepare("UPDATE decisions SET status = 'active', superseded_by = NULL WHERE superseded_by = ?").run(id);
+  return db.prepare('DELETE FROM decisions WHERE id = ?').run(id).changes > 0;
+});
+
 function stats() {
   const total = db.prepare('SELECT COUNT(*) AS n FROM decisions').get().n;
   const active = db.prepare("SELECT COUNT(*) AS n FROM decisions WHERE status = 'active'").get().n;
@@ -247,6 +255,7 @@ module.exports = {
   recentDecisions,
   openActionItems,
   nudgeableActionItems,
+  deleteDecision,
   markActionItemDone,
   markNudged,
   stats,

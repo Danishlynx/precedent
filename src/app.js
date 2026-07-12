@@ -146,14 +146,26 @@ api.post('/api/dev/scan', async (req, res) => {
   }
 });
 
-// Dev trigger: fire the follow-up nudge DMs now.
-api.post('/api/dev/nudge', async (_req, res) => {
+// Dev trigger: fire the follow-up nudge DMs now (?force=1 bypasses the daily gate).
+api.post('/api/dev/nudge', async (req, res) => {
   try {
-    const result = await followups.runNudges(app.client);
+    const result = await followups.runNudges(app.client, req.query.force === '1');
     res.json(result);
   } catch (err) {
     console.error('[bridge] nudge failed:', err.data?.error || err.message);
     res.status(500).json({ error: err.data?.error || err.message });
+  }
+});
+
+// Dev trigger: remove a decision (demo retakes). Restores anything it superseded.
+api.post('/api/dev/delete-decision', (req, res) => {
+  const id = Number(req.query.id);
+  if (!id) return res.status(400).json({ error: 'id query param required' });
+  try {
+    res.json({ deleted: store.deleteDecision(id), id });
+  } catch (err) {
+    console.error('[bridge] delete-decision failed:', err);
+    res.status(500).json({ error: 'delete_failed' });
   }
 });
 
