@@ -1,4 +1,4 @@
-# Precedent 📌
+# Precedent 📌 https://precedent-website.vercel.app/
 
 Decision memory for Slack. Watches team channels, extracts decisions with Claude, stores them with permalinks, answers "what did we decide about X?" in the assistant panel with receipts, nudges action-item owners, and exposes the decision log to external agents via MCP.
 
